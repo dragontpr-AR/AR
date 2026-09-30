@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>掃描中 · WebAR</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
     html, body {
@@ -15,46 +15,60 @@
       background: #000;
       font-family: "PingFang TC", "Noto Sans TC", sans-serif;
     }
-    a-scene {
-      position: fixed;
-      inset: 0;
+    .wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
     }
     #hud {
       position: fixed;
-      left: 16px;
-      right: 16px;
-      bottom: 28px;
-      z-index: 20;
+      left: 12px;
+      right: 12px;
+      bottom: 20px;
+      z-index: 40;
       color: #fff;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       text-align: center;
-      pointer-events: none;
-      text-shadow: 0 2px 10px #000;
       padding: 10px 12px;
       border-radius: 12px;
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(0, 0, 0, 0.55);
     }
-    #hud.found {
-      background: rgba(22, 163, 74, 0.85);
+    #hud.found { background: rgba(22, 163, 74, 0.92); }
+    #success {
+      display: none;
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      top: 72px;
+      z-index: 35;
+      background: rgba(8, 18, 36, 0.92);
+      border: 3px solid #22d3ee;
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      color: #f8fafc;
     }
+    #success.show { display: block; }
+    #success img { width: min(100%, 280px); height: auto; }
+    #success h2 { margin: 8px 0 4px; font-size: 22px; color: #f4d35e; }
     #tap {
       position: fixed;
       inset: 0;
-      z-index: 30;
+      z-index: 50;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: rgba(7, 11, 20, 0.78);
+      background: rgba(7, 11, 20, 0.82);
       color: #e8eef7;
       text-align: center;
       padding: 24px;
     }
-    #tap p { margin: 0 0 8px; color: #93a4bb; font-size: 14px; line-height: 1.6; }
+    #tap p { margin: 0; color: #93a4bb; font-size: 14px; line-height: 1.7; max-width: 320px; }
     #tap button {
       border: 0;
       border-radius: 14px;
@@ -69,7 +83,7 @@
       position: fixed;
       top: 12px;
       left: 12px;
-      z-index: 21;
+      z-index: 45;
       color: #fff;
       text-decoration: none;
       font-size: 13px;
@@ -79,75 +93,65 @@
     }
   </style>
   <script>
-    const params = new URLSearchParams(location.search);
-    const useVideo = params.get("content") === "video";
-
     AFRAME.registerComponent("play-on-target", {
       init: function () {
-        const video = document.querySelector("#ar-video");
         const hud = document.querySelector("#hud");
+        const success = document.querySelector("#success");
         this.el.addEventListener("targetFound", () => {
           hud.textContent = "已對準，AR 已啟動";
           hud.classList.add("found");
-          if (useVideo && video) video.play().catch(() => {});
+          success.classList.add("show");
         });
         this.el.addEventListener("targetLost", () => {
-          hud.textContent = "尚未對準：請讓黃框圖案佔滿畫面";
+          hud.textContent = "請把整張黃框海報都拍進去，不要只拍中間星星";
           hud.classList.remove("found");
-          if (useVideo && video) video.pause();
+          success.classList.remove("show");
         });
       }
     });
-
     window.addEventListener("DOMContentLoaded", () => {
-      if (useVideo) {
-        document.querySelector("#content-image").setAttribute("visible", "false");
-        document.querySelector("#content-plane").setAttribute("visible", "true");
-      }
-      const tap = document.querySelector("#tap");
-      tap.addEventListener("click", () => tap.classList.add("hidden"));
+      document.querySelector("#tap").addEventListener("click", () => {
+        document.querySelector("#tap").classList.add("hidden");
+      });
     });
   </script>
 </head>
 <body>
   <a class="back" href="./index.html">返回</a>
   <div id="tap">
-    <p>請用另一台電腦或平板全螢幕打開 print.html，再拿這支手機對準那張黃框圖。</p>
+    <p>請用電腦全螢幕打開 print.html。<br>手機要拍到整張黃框，包含四個角，不要只拍中間圓形。</p>
     <button type="button">允許相機並開始</button>
   </div>
-  <div id="hud">尚未對準：請讓黃框圖案佔滿畫面</div>
+  <div id="success">
+    <h2>AR 已啟動</h2>
+    <p>引擎已認出指定圖案</p>
+    <img src="./assets/overlay.png" alt="AR 內容" />
+  </div>
+  <div id="hud">請把整張黃框海報都拍進去，不要只拍中間星星</div>
 
-  <a-scene
-    mindar-image="imageTargetSrc: ./assets/targets.mind; uiError: yes; uiLoading: yes; uiScanning: no; filterMinCF: 0.0001; filterBeta: 0.001;"
-    color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-  >
-    <a-assets>
-      <img id="overlay-still" src="./assets/overlay.png" />
-      <video id="ar-video" src="./assets/overlay.mp4" loop playsinline webkit-playsinline muted preload="auto"></video>
-    </a-assets>
-
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <a-entity mindar-image-target="targetIndex: 0" play-on-target>
-      <a-image
-        id="content-image"
-        src="#overlay-still"
-        position="0 0 0.02"
-        width="1"
-        height="1.25"
-      ></a-image>
-      <a-video
-        id="content-plane"
-        src="#ar-video"
-        position="0 0 0.02"
-        width="1"
-        height="1.25"
-        visible="false"
-      ></a-video>
-    </a-entity>
-  </a-scene>
+  <div class="wrap">
+    <a-scene
+      mindar-image="imageTargetSrc: ./assets/targets.mind; uiError: yes; uiLoading: yes; uiScanning: no;"
+      color-space="sRGB"
+      renderer="colorManagement: true; physicallyCorrectLights: true;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      embedded
+    >
+      <a-assets>
+        <img id="overlay-still" src="./assets/overlay.png" />
+      </a-assets>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-entity mindar-image-target="targetIndex: 0" play-on-target>
+        <a-plane
+          src="#overlay-still"
+          position="0 0 0.05"
+          width="1"
+          height="1.25"
+          material="transparent: true; opacity: 0.95; side: double"
+        ></a-plane>
+      </a-entity>
+    </a-scene>
+  </div>
 </body>
 </html>
