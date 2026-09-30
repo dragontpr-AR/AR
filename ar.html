@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>掃描中 · WebAR</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    html, body { margin: 0; overflow: hidden; background: #000; font-family: "PingFang TC", "Noto Sans TC", sans-serif; }
+    #hud {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 18px;
+      z-index: 20;
+      color: #e8eef7;
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+      text-shadow: 0 1px 8px #000;
+    }
+    #tap {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(7, 11, 20, 0.72);
+    }
+    #tap button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      background: #f4d35e;
+      color: #111827;
+    }
+    #tap.hidden { display: none; }
+    a.back {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 21;
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      background: rgba(0,0,0,.45);
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+  </style>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const useImage = params.get("content") === "image";
+
+    AFRAME.registerComponent("play-on-target", {
+      init: function () {
+        const video = document.querySelector("#ar-video");
+        const hud = document.querySelector("#hud");
+        this.el.addEventListener("targetFound", () => {
+          hud.textContent = "已對準圖案";
+          if (video && !useImage) {
+            video.play().catch(() => {});
+          }
+        });
+        this.el.addEventListener("targetLost", () => {
+          hud.textContent = "把鏡頭對準指定圖案";
+          if (video && !useImage) video.pause();
+        });
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const plane = document.querySelector("#content-plane");
+      if (useImage) {
+        plane.setAttribute("visible", false);
+        document.querySelector("#content-image").setAttribute("visible", true);
+      }
+      const tap = document.querySelector("#tap");
+      const video = document.querySelector("#ar-video");
+      tap.addEventListener("click", () => {
+        if (video) video.play().catch(() => {});
+        tap.classList.add("hidden");
+      });
+    });
+  </script>
+</head>
+<body>
+  <a class="back" href="./index.html">返回</a>
+  <div id="tap"><button type="button">允許相機並開始</button></div>
+  <div id="hud">把鏡頭對準指定圖案</div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: ./assets/targets.mind; uiError: yes; uiLoading: yes; uiScanning: no;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    embedded
+  >
+    <a-assets>
+      <img id="overlay-still" src="./assets/overlay.png" />
+      <video id="ar-video" src="./assets/overlay.mp4" loop playsinline webkit-playsinline muted preload="auto"></video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- target.png is 640x800, so height = 800/640 = 1.25 when width = 1 -->
+    <a-entity mindar-image-target="targetIndex: 0" play-on-target>
+      <a-video
+        id="content-plane"
+        src="#ar-video"
+        position="0 0 0.01"
+        width="1"
+        height="1.25"
+      ></a-video>
+      <a-image
+        id="content-image"
+        src="#overlay-still"
+        position="0 0 0.01"
+        width="1"
+        height="1.25"
+        visible="false"
+      ></a-image>
+    </a-entity>
+  </a-scene>
+</body>
+</html>

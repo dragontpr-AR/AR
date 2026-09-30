@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>掃描體驗 · WebAR</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --card: #111827;
+      --line: #1f2a3d;
+      --gold: #f4d35e;
+      --cyan: #22d3ee;
+      --text: #e8eef7;
+      --muted: #93a4bb;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(1200px 600px at 50% -10%, #16324a 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 20px 64px;
+    }
+    .kicker {
+      color: var(--cyan);
+      letter-spacing: 0.18em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    h1 {
+      font-size: 30px;
+      line-height: 1.25;
+      margin: 8px 0 12px;
+    }
+    p.lead { color: var(--muted); margin: 0 0 24px; line-height: 1.7; }
+    .panel {
+      background: rgba(17, 24, 39, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .target-wrap {
+      background: #0b1220;
+      border-radius: 16px;
+      padding: 12px;
+      text-align: center;
+    }
+    .target-wrap img {
+      width: min(100%, 360px);
+      height: auto;
+      border-radius: 8px;
+    }
+    ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 22px;
+    }
+    a.btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-weight: 700;
+    }
+    a.btn.primary { background: var(--gold); color: #111827; }
+    a.btn.ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid #334155;
+    }
+    .hint { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="kicker">WEBAR SCAN DEMO</div>
+    <h1>先做一個能掃的體驗</h1>
+    <p class="lead">用任何手機瀏覽器打開掃描頁，允許相機，對準下方這張指定圖案，就會疊上預設影片。</p>
+
+    <div class="panel">
+      <div class="target-wrap">
+        <img src="./assets/target.png" alt="AR 指定圖案 target.png" />
+      </div>
+    </div>
+
+    <div class="panel">
+      <strong>怎麼掃</strong>
+      <ol>
+        <li>用一台裝置顯示或列印指定圖案（可開「只顯示圖案」）。</li>
+        <li>另一支手機點「開始掃描」，允許相機。</li>
+        <li>對準圖案，距離約 20–40 公分，光線均匀即可。</li>
+        <li>看到「AR 已啟動」影片代表成功。移開鏡頭會暫停。</li>
+      </ol>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" href="./ar.html">開始掃描</a>
+      <a class="btn ghost" href="./print.html">只顯示圖案（給另一台螢幕）</a>
+      <a class="btn ghost" href="./ar.html?content=image">改掃靜態圖版本</a>
+    </div>
+    <p class="hint">相機功能需要 HTTPS。本機可用 <code>npx serve .</code> 測試；真機請把整個資料夾上傳到 Cloudflare Pages 或 GitHub Pages。</p>
+    <p class="hint">若從 Line / Instagram 內建瀏覽器開啟失敗，改用 Safari 或 Chrome 打開同一個網址。</p>
+  </main>
+</body>
+</html>
