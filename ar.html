@@ -19,7 +19,12 @@
     #tap { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(7,11,20,.84); color: #fff; text-align: center; padding: 24px; }
     #tap.hidden { display: none; }
     #tap p { color: #93a4bb; max-width: 320px; line-height: 1.6; margin: 0; }
-    #tap button { border: 0; border-radius: 14px; padding: 14px 22px; font-weight: 700; background: #f4d35e; font-size: 16px; }
+    .a-enter-vr, .a-enter-ar { display: none !important; }
+    #inapp { display:none; position:fixed; inset:0; z-index:80; background:#070b14; color:#e8eef7; padding:28px 20px; font-family:"PingFang TC","Noto Sans TC",sans-serif; }
+    #inapp.show { display:flex; flex-direction:column; justify-content:center; gap:12px; text-align:center; }
+    #inapp a, #inapp button { display:block; width:100%; max-width:360px; margin:0 auto; padding:14px; border-radius:14px; font-weight:700; border:0; text-decoration:none; }
+    #inapp .go { background:#f4d35e; color:#111827; }
+    #inapp .copy { background:transparent; color:#e8eef7; border:1px solid #334155; }
   </style>
   <script>
     AFRAME.registerComponent("play-on-target", {
@@ -42,9 +47,47 @@
       var tap = document.getElementById("tap");
       if (tap) tap.classList.add("hidden");
     }
+    (function () {
+      var ua = navigator.userAgent || "";
+      var inApp = /WhatsApp|WABusiness|FBAN|FBAV|Instagram|Line\/|Messenger|Twitter|TikTok|Snapchat|MicroMessenger|WeChat|wv\)/i.test(ua);
+      if (!inApp) return;
+      var box = document.getElementById("inapp");
+      if (box) box.classList.add("show");
+      var isIOS = /iPad|iPhone|iPod/.test(ua);
+      var isAndroid = /Android/i.test(ua);
+      var page = location.href.split("#")[0];
+      if (isIOS) {
+        var hint = document.getElementById("ios-hint");
+        if (hint) hint.hidden = false;
+      }
+      var open = document.getElementById("open-external");
+      if (open && isAndroid) {
+        var u = new URL(page);
+        open.href = "intent://" + u.host + u.pathname + u.search + "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" + encodeURIComponent(page) + ";end";
+      } else if (open && isIOS) {
+        open.href = page.replace(/^https:/, "x-safari-https:");
+        open.textContent = "嘗試用 Safari 開啟";
+      }
+      var copy = document.getElementById("copy-link");
+      if (copy) copy.onclick = function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(page);
+          copy.textContent = "已複製，請貼到 Chrome";
+        } else {
+          window.prompt("請複製這個連結", page);
+        }
+      };
+    })();
   </script>
 </head>
 <body>
+  <div id="inapp">
+    <h2>請用 Chrome 或 Safari 開啟</h2>
+    <p>WhatsApp / Line 內建瀏覽器不能開相機，所以 AR 無法啟動。</p>
+    <a class="go" id="open-external" href="#">用 Chrome 開啟</a>
+    <button class="copy" id="copy-link" type="button">複製連結</button>
+    <p id="ios-hint" hidden>iPhone：點右上角「⋯」→「在 Safari 開啟」。</p>
+  </div>
   <a class="back" href="./index.html">返回</a>
   <div id="success">
     <h2>AR 已啟動</h2>
