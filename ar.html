@@ -4,154 +4,99 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>掃描中 · WebAR</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: "PingFang TC", "Noto Sans TC", sans-serif;
-    }
-    .wrap {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-    #hud {
-      position: fixed;
-      left: 12px;
-      right: 12px;
-      bottom: 20px;
-      z-index: 40;
-      color: #fff;
-      font-size: 15px;
-      font-weight: 700;
-      text-align: center;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(0, 0, 0, 0.55);
-    }
-    #hud.found { background: rgba(22, 163, 74, 0.92); }
-    #success {
-      display: none;
-      position: fixed;
-      left: 16px;
-      right: 16px;
-      top: 72px;
-      z-index: 35;
-      background: rgba(8, 18, 36, 0.92);
-      border: 3px solid #22d3ee;
-      border-radius: 16px;
-      padding: 16px;
-      text-align: center;
-      color: #f8fafc;
-    }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: "PingFang TC", "Noto Sans TC", sans-serif; }
+    #container { position: fixed; inset: 0; width: 100%; height: 100%; }
+    #container video, #container canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; object-fit: cover; }
+    a.back { position: fixed; top: 12px; left: 12px; z-index: 40; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 999px; }
+    #hud { position: fixed; left: 12px; right: 12px; bottom: 18px; z-index: 40; color: #fff; text-align: center; font-weight: 700; padding: 10px; border-radius: 12px; background: rgba(0,0,0,.55); }
+    #hud.found { background: #16a34a; }
+    #success { display: none; position: fixed; left: 16px; right: 16px; top: 64px; z-index: 45; background: rgba(8,18,36,.94); border: 3px solid #22d3ee; border-radius: 16px; padding: 14px; text-align: center; color: #fff; }
     #success.show { display: block; }
-    #success img { width: min(100%, 280px); height: auto; }
-    #success h2 { margin: 8px 0 4px; font-size: 22px; color: #f4d35e; }
-    #tap {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      background: rgba(7, 11, 20, 0.82);
-      color: #e8eef7;
-      text-align: center;
-      padding: 24px;
-    }
-    #tap p { margin: 0; color: #93a4bb; font-size: 14px; line-height: 1.7; max-width: 320px; }
-    #tap button {
-      border: 0;
-      border-radius: 14px;
-      padding: 14px 22px;
-      font-size: 16px;
-      font-weight: 700;
-      background: #f4d35e;
-      color: #111827;
-    }
+    #success h2 { margin: 6px 0; color: #f4d35e; }
+    #success img { width: min(100%, 240px); height: auto; }
+    #tap { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(7,11,20,.84); color: #fff; text-align: center; padding: 24px; }
     #tap.hidden { display: none; }
-    a.back {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 45;
-      color: #fff;
-      text-decoration: none;
-      font-size: 13px;
-      background: rgba(0,0,0,.45);
-      padding: 6px 10px;
-      border-radius: 999px;
-    }
+    #tap p { color: #93a4bb; max-width: 320px; line-height: 1.6; }
+    #tap button { border: 0; border-radius: 14px; padding: 14px 22px; font-weight: 700; background: #f4d35e; }
+    #err { display: none; color: #fecaca; padding: 0 20px; }
   </style>
-  <script>
-    AFRAME.registerComponent("play-on-target", {
-      init: function () {
-        const hud = document.querySelector("#hud");
-        const success = document.querySelector("#success");
-        this.el.addEventListener("targetFound", () => {
-          hud.textContent = "已對準，AR 已啟動";
-          hud.classList.add("found");
-          success.classList.add("show");
-        });
-        this.el.addEventListener("targetLost", () => {
-          hud.textContent = "請把整張黃框海報都拍進去，不要只拍中間星星";
-          hud.classList.remove("found");
-          success.classList.remove("show");
-        });
-      }
-    });
-    window.addEventListener("DOMContentLoaded", () => {
-      document.querySelector("#tap").addEventListener("click", () => {
-        document.querySelector("#tap").classList.add("hidden");
-      });
-    });
-  </script>
 </head>
 <body>
   <a class="back" href="./index.html">返回</a>
-  <div id="tap">
-    <p>請用電腦全螢幕打開 print.html。<br>手機要拍到整張黃框，包含四個角，不要只拍中間圓形。</p>
-    <button type="button">允許相機並開始</button>
-  </div>
+  <div id="container"></div>
   <div id="success">
     <h2>AR 已啟動</h2>
-    <p>引擎已認出指定圖案</p>
-    <img src="./assets/overlay.png" alt="AR 內容" />
+    <p>已認出指定圖案</p>
+    <img src="./assets/overlay.png" alt="AR 內容">
   </div>
-  <div id="hud">請把整張黃框海報都拍進去，不要只拍中間星星</div>
+  <div id="hud">請對準電腦上的整張黃框海報</div>
+  <div id="tap">
+    <p>對準後會跳出「AR 已啟動」。若沒有跳出，請把這一頁整個存成新的 ar.html 再上傳。</p>
+    <p id="err"></p>
+    <button type="button" id="start">允許相機並開始</button>
+  </div>
 
-  <div class="wrap">
-    <a-scene
-      mindar-image="imageTargetSrc: ./assets/targets.mind; uiError: yes; uiLoading: yes; uiScanning: no;"
-      color-space="sRGB"
-      renderer="colorManagement: true; physicallyCorrectLights: true;"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-      embedded
-    >
-      <a-assets>
-        <img id="overlay-still" src="./assets/overlay.png" />
-      </a-assets>
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <a-entity mindar-image-target="targetIndex: 0" play-on-target>
-        <a-plane
-          src="#overlay-still"
-          position="0 0 0.05"
-          width="1"
-          height="1.25"
-          material="transparent: true; opacity: 0.95; side: double"
-        ></a-plane>
-      </a-entity>
-    </a-scene>
-  </div>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { MindARThree } from "mindar-image-three";
+
+    const hud = document.querySelector("#hud");
+    const success = document.querySelector("#success");
+    const tap = document.querySelector("#tap");
+    const err = document.querySelector("#err");
+
+    const showFound = (found) => {
+      hud.textContent = found ? "已對準，AR 已啟動" : "請對準電腦上的整張黃框海報";
+      hud.classList.toggle("found", found);
+      success.classList.toggle("show", found);
+    };
+
+    let started = false;
+    document.querySelector("#start").addEventListener("click", async () => {
+      if (started) return;
+      started = true;
+      tap.classList.add("hidden");
+      try {
+        const mindarThree = new MindARThree({
+          container: document.querySelector("#container"),
+          imageTargetSrc: "./assets/targets.mind",
+          uiLoading: "no",
+          uiScanning: "no",
+          uiError: "no"
+        });
+        const { renderer, scene, camera } = mindarThree;
+        const light = new THREE.AmbientLight(0xffffff, 1);
+        scene.add(light);
+
+        const texture = new THREE.TextureLoader().load("./assets/overlay.png");
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const plane = new THREE.Mesh(
+          new THREE.PlaneGeometry(1, 1.25),
+          new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide })
+        );
+        const anchor = mindarThree.addAnchor(0);
+        anchor.group.add(plane);
+        anchor.onTargetFound = () => showFound(true);
+        anchor.onTargetLost = () => showFound(false);
+
+        await mindarThree.start();
+        renderer.setAnimationLoop(() => renderer.render(scene, camera));
+      } catch (e) {
+        tap.classList.remove("hidden");
+        started = false;
+        err.style.display = "block";
+        err.textContent = "無法啟動相機：" + (e && e.message ? e.message : e);
+      }
+    });
+  </script>
 </body>
 </html>
