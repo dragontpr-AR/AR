@@ -4,33 +4,75 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>掃描中 · WebAR</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-    .example-container { overflow: hidden; position: absolute; width: 100%; height: 100%; }
+    .example-container { overflow: hidden; position: absolute; inset: 0; width: 100%; height: 100%; }
+    .example-container a-scene { width: 100%; height: 100%; }
     .a-enter-vr, .a-enter-ar { display: none !important; }
-    a.back { position: fixed; top: 10px; left: 10px; z-index: 20; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.45); padding: 6px 10px; border-radius: 999px; }
-    #status { position: fixed; left: 10px; right: 10px; top: 44px; z-index: 20; text-align: center; color: #fff; font-size: 13px; text-shadow: 0 1px 6px #000; pointer-events: none; }
-    #inapp { display: none; position: fixed; inset: 0; z-index: 40; background: #070b14; color: #e8eef7; padding: 28px 20px; font-family: "PingFang TC", "Noto Sans TC", sans-serif; }
+    a.back { position: fixed; top: 8px; left: 8px; z-index: 30; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 999px; }
+    #dbg { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 30; color: #9f6; font: 12px/1.4 ui-monospace, monospace; background: rgba(0,0,0,.55); padding: 8px; border-radius: 8px; pointer-events: none; }
+    #inapp { display: none; position: fixed; inset: 0; z-index: 50; background: #070b14; color: #e8eef7; padding: 28px 20px; font-family: "PingFang TC","Noto Sans TC",sans-serif; }
     #inapp.show { display: flex; flex-direction: column; justify-content: center; gap: 12px; text-align: center; }
     #inapp a, #inapp button { display: block; width: 100%; max-width: 360px; margin: 0 auto; padding: 14px; border-radius: 14px; font-weight: 700; border: 0; text-decoration: none; }
-    #inapp .go { background: #f4d35e; color: #111827; }
+    #inapp .go { background: #f4d35e; color: #111; }
     #inapp .copy { background: transparent; color: #e8eef7; border: 1px solid #334155; }
   </style>
   <script>
     AFRAME.registerComponent("lock-to-target", {
       init: function () {
-        var status = document.querySelector("#status");
+        this.el.object3D.matrixAutoUpdate = false;
+        var dbg = document.querySelector("#dbg");
         this.el.addEventListener("targetFound", function () {
-          status.textContent = "已鎖在圖案上：左右移動手機，內容應跟著海報走";
+          dbg.textContent = "已鎖定圖案，請左右移動手機";
         });
         this.el.addEventListener("targetLost", function () {
-          status.textContent = "對準整張黃框海報";
+          dbg.textContent = "尚未鎖定：對準整張黃框海報";
         });
+      },
+      tick: function () {
+        this.el.object3D.matrixAutoUpdate = false;
+        var dbg = document.querySelector("#dbg");
+        if (!this.el.object3D.visible) return;
+        var e = this.el.object3D.matrix.elements;
+        dbg.textContent = "鎖定中 x=" + e[12].toFixed(2) + " y=" + e[13].toFixed(2) + " z=" + e[14].toFixed(2) + "（這組數字移動手機時應改變）";
       }
     });
-    window.addEventListener("DOMContentLoaded", function () {
+  </script>
+</head>
+<body>
+  <div id="inapp">
+    <h2>請用 Chrome 或 Safari 開啟</h2>
+    <p>WhatsApp / Line 內建瀏覽器不能開相機。</p>
+    <a class="go" id="open-external" href="#">用 Chrome 開啟</a>
+    <button class="copy" id="copy-link" type="button">複製連結</button>
+    <p id="ios-hint" hidden>iPhone：點「⋯」→「在 Safari 開啟」。</p>
+  </div>
+  <a class="back" href="./index.html">返回</a>
+  <div id="dbg">尚未鎖定：對準整張黃框海報</div>
+
+  <div class="example-container">
+    <a-scene
+      mindar-image="imageTargetSrc: ./assets/targets.mind;"
+      embedded
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-assets>
+        <img id="overlay-still" src="./assets/overlay.png" />
+      </a-assets>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-entity mindar-image-target="targetIndex: 0" lock-to-target>
+        <a-plane src="#overlay-still" position="0 0 0.03" width="1" height="1.25"></a-plane>
+        <a-box position="0 0.7 0.15" width="0.25" height="0.25" depth="0.25" color="#ff4d00"></a-box>
+      </a-entity>
+    </a-scene>
+  </div>
+  <script>
+    (function () {
       var ua = navigator.userAgent || "";
       var inApp = /WhatsApp|WABusiness|FBAN|FBAV|Instagram|Line\/|Messenger|Twitter|TikTok|Snapchat|MicroMessenger|WeChat|wv\)/i.test(ua);
       if (!inApp) return;
@@ -51,47 +93,9 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(page);
           this.textContent = "已複製，請貼到 Chrome";
-        } else {
-          window.prompt("請複製這個連結", page);
-        }
+        } else window.prompt("請複製這個連結", page);
       };
-    });
+    })();
   </script>
-</head>
-<body>
-  <div id="inapp">
-    <h2>請用 Chrome 或 Safari 開啟</h2>
-    <p>WhatsApp / Line 內建瀏覽器不能開相機。</p>
-    <a class="go" id="open-external" href="#">用 Chrome 開啟</a>
-    <button class="copy" id="copy-link" type="button">複製連結</button>
-    <p id="ios-hint" hidden>iPhone：點右上角「⋯」→「在 Safari 開啟」。</p>
-  </div>
-  <a class="back" href="./index.html">返回</a>
-  <div id="status">對準整張黃框海報</div>
-
-  <div class="example-container">
-    <a-scene
-      mindar-image="imageTargetSrc: ./assets/targets.mind; uiError: yes; uiLoading: yes; uiScanning: yes;"
-      embedded
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-    >
-      <a-assets>
-        <img id="overlay-still" src="./assets/overlay.png" />
-      </a-assets>
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <a-entity mindar-image-target="targetIndex: 0" lock-to-target>
-        <a-plane
-          src="#overlay-still"
-          position="0 0 0.02"
-          width="1"
-          height="1.25"
-          opacity="0.96"
-        ></a-plane>
-      </a-entity>
-    </a-scene>
-  </div>
 </body>
 </html>
