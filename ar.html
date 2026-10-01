@@ -29,6 +29,8 @@
     }
     .a-enter-vr, .a-enter-ar { display: none !important; }
     a.back { position: fixed; top: 8px; left: 8px; z-index: 30; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 999px; }
+    #sound { display: none; position: fixed; right: 8px; top: 8px; z-index: 30; border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 700; background: #f4d35e; color: #111; }
+    #sound.show { display: block; }
     #inapp { display: none; position: fixed; inset: 0; z-index: 50; background: #070b14; color: #e8eef7; padding: 28px 20px; font-family: "PingFang TC","Noto Sans TC",sans-serif; }
     #inapp.show { display: flex; flex-direction: column; justify-content: center; gap: 12px; text-align: center; }
     #inapp a, #inapp button { display: block; width: 100%; max-width: 360px; margin: 0 auto; padding: 14px; border-radius: 14px; font-weight: 700; border: 0; text-decoration: none; }
@@ -56,6 +58,21 @@
     AFRAME.registerComponent("lock-to-target", {
       init: function () {
         this.el.object3D.matrixAutoUpdate = false;
+        var video = document.querySelector("#ar-video");
+        var sound = document.querySelector("#sound");
+        this.el.addEventListener("targetFound", function () {
+          if (video) video.play().catch(function () {});
+          sound.classList.add("show");
+        });
+        this.el.addEventListener("targetLost", function () {
+          if (video) video.pause();
+        });
+        sound.addEventListener("click", function () {
+          if (!video) return;
+          video.muted = !video.muted;
+          sound.textContent = video.muted ? "開聲音" : "關聲音";
+          if (!video.muted) video.play().catch(function () {});
+        });
       },
       tick: function () {
         this.el.object3D.matrixAutoUpdate = false;
@@ -72,6 +89,7 @@
     <p id="ios-hint" hidden>iPhone：點「⋯」→「在 Safari 開啟」。</p>
   </div>
   <a class="back" href="./index.html">返回</a>
+  <button id="sound" type="button">開聲音</button>
 
   <div class="example-container">
     <a-scene
@@ -85,11 +103,11 @@
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
-        <img id="overlay-still" src="./assets/overlay.png" />
+        <video id="ar-video" src="./assets/overlay.mp4" loop playsinline webkit-playsinline muted preload="auto" crossorigin="anonymous"></video>
       </a-assets>
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
       <a-entity mindar-image-target="targetIndex: 0" lock-to-target>
-        <a-plane src="#overlay-still" position="0 0 0.03" width="1" height="1.25"></a-plane>
+        <a-video src="#ar-video" position="0 0 0.03" width="1" height="1.35"></a-video>
       </a-entity>
     </a-scene>
   </div>
