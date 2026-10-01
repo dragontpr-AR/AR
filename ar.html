@@ -31,8 +31,8 @@
       left: 0;
       top: 0;
       z-index: 20;
-      width: 240px;
-      height: 325px;
+      width: 300px;
+      height: 300px;
       object-fit: cover;
       background: #000;
       opacity: 1;
@@ -68,8 +68,10 @@
         var sound = document.querySelector("#sound");
         var THREE = AFRAME.THREE;
         this.corners = [
-          new THREE.Vector3(-0.5, 0.675, 0),
-          new THREE.Vector3(0.5, 0.675, 0)
+          new THREE.Vector3(-0.5, 0.5, 0),
+          new THREE.Vector3(0.5, 0.5, 0),
+          new THREE.Vector3(0.5, -0.5, 0),
+          new THREE.Vector3(-0.5, -0.5, 0)
         ];
         this.el.addEventListener("targetFound", function () {
           clip.style.display = "block";
@@ -94,23 +96,18 @@
       tick: function () {
         this.el.object3D.matrixAutoUpdate = false;
         if (!this.el.object3D.visible || !this.clip) return;
-        var sceneEl = this.el.sceneEl;
-        var camera = sceneEl.camera;
+        var camera = this.el.sceneEl.camera;
         if (!camera) return;
         var w = window.innerWidth;
         var h = window.innerHeight;
-        var a = this.corners[0].clone().applyMatrix4(this.el.object3D.matrixWorld).project(camera);
-        var b = this.corners[1].clone().applyMatrix4(this.el.object3D.matrixWorld).project(camera);
-        var ax = (a.x * 0.5 + 0.5) * w;
-        var ay = (-a.y * 0.5 + 0.5) * h;
-        var bx = (b.x * 0.5 + 0.5) * w;
-        var by = (-b.y * 0.5 + 0.5) * h;
-        var width = Math.hypot(bx - ax, by - ay);
-        if (!isFinite(width) || width < 20) return;
-        var angle = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
-        this.clip.style.width = width + "px";
-        this.clip.style.height = (width * 1.35) + "px";
-        this.clip.style.transform = "translate(" + ax + "px," + ay + "px) rotate(" + angle + "deg)";
+        var pts = this.corners.map(function (c) {
+          var v = c.clone().applyMatrix4(this.el.object3D.matrixWorld).project(camera);
+          return [(v.x * 0.5 + 0.5) * w, (-v.y * 0.5 + 0.5) * h];
+        }, this);
+        if (pts.some(function (p) { return !isFinite(p[0]) || !isFinite(p[1]); })) return;
+        var m = quadMatrix(300, 300, pts[0], pts[1], pts[2], pts[3]);
+        if (!m) return;
+        this.clip.style.transform = "matrix3d(" + m.join(",") + ")";
       }
     });
   </script>
@@ -129,7 +126,7 @@
 
   <div class="example-container">
     <a-scene
-      mindar-image="imageTargetSrc: ./assets/targets.mind;"
+      mindar-image="imageTargetSrc: ./assets/targets.mind; warmupTolerance: 1; missTolerance: 12; filterMinCF: 0.001; filterBeta: 1000;"
       show-camera
       embedded
       color-space="sRGB"
@@ -142,6 +139,44 @@
     </a-scene>
   </div>
   <script>
+    function adj(m) {
+      return [
+        m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+        m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+        m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]
+      ];
+    }
+    function multmm(a, b) {
+      var c = [];
+      for (var i = 0; i < 3; i++) {
+        for (var j = 0; j < 3; j++) {
+          var cij = 0;
+          for (var k = 0; k < 3; k++) cij += a[3*i+k] * b[3*k+j];
+          c[3*i+j] = cij;
+        }
+      }
+      return c;
+    }
+    function multmv(m, v) {
+      return [
+        m[0]*v[0] + m[1]*v[1] + m[2]*v[2],
+        m[3]*v[0] + m[4]*v[1] + m[5]*v[2],
+        m[6]*v[0] + m[7]*v[1] + m[8]*v[2]
+      ];
+    }
+    function basisToPoints(x1, y1, x2, y2, x3, y3, x4, y4) {
+      var m = [x1, x2, x3, y1, y2, y3, 1, 1, 1];
+      var v = multmv(adj(m), [x4, y4, 1]);
+      return multmm(m, [v[0], 0, 0, 0, v[1], 0, 0, 0, v[2]]);
+    }
+    function quadMatrix(w, h, p0, p1, p2, p3) {
+      var s = basisToPoints(0, 0, w, 0, 0, h, w, h);
+      var d = basisToPoints(p0[0], p0[1], p1[0], p1[1], p3[0], p3[1], p2[0], p2[1]);
+      var t = multmm(d, adj(s));
+      if (!t[8]) return null;
+      for (var i = 0; i < 9; i++) t[i] /= t[8];
+      return [t[0], t[3], 0, t[6], t[1], t[4], 0, t[7], 0, 0, 1, 0, t[2], t[5], 0, t[8]];
+    }
     (function () {
       var ua = navigator.userAgent || "";
       var inApp = /WhatsApp|WABusiness|FBAN|FBAV|Instagram|Line\/|Messenger|Twitter|TikTok|Snapchat|MicroMessenger|WeChat|wv\)/i.test(ua);
