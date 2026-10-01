@@ -105,9 +105,15 @@
           return [(v.x * 0.5 + 0.5) * w, (-v.y * 0.5 + 0.5) * h];
         }, this);
         if (pts.some(function (p) { return !isFinite(p[0]) || !isFinite(p[1]); })) return;
-        var m = quadMatrix(300, 300, pts[0], pts[1], pts[2], pts[3]);
-        if (!m) return;
-        this.clip.style.transform = "matrix3d(" + m.join(",") + ")";
+        var cx = (pts[0][0] + pts[1][0] + pts[2][0] + pts[3][0]) / 4;
+        var cy = (pts[0][1] + pts[1][1] + pts[2][1] + pts[3][1]) / 4;
+        var size = (Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]) + Math.hypot(pts[3][0] - pts[0][0], pts[3][1] - pts[0][1])) / 2;
+        if (!isFinite(size) || size < 40) return;
+        var angle = Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]) * 180 / Math.PI;
+        this.clip.style.width = size + "px";
+        this.clip.style.height = size + "px";
+        this.clip.style.transform = "translate(" + (cx - size / 2) + "px," + (cy - size / 2) + "px) rotate(" + angle + "deg)";
+        this.clip.style.transformOrigin = "center center";
       }
     });
   </script>
@@ -122,7 +128,7 @@
   </div>
   <a class="back" href="./index.html">返回</a>
   <button id="sound" type="button">開聲音</button>
-  <video id="clip" src="./assets/overlay.mp4" loop playsinline webkit-playsinline muted preload="auto"></video>
+  <video id="clip" src="./assets/overlay.mp4?v=14" loop playsinline webkit-playsinline muted preload="auto"></video>
 
   <div class="example-container">
     <a-scene
