@@ -21,16 +21,41 @@
     #inapp .copy { background: transparent; color: #e8eef7; border: 1px solid #334155; }
   </style>
   <script>
-    AFRAME.registerComponent("transparent-scene", {
+    AFRAME.registerComponent("video-backdrop", {
       init: function () {
-        var scene = this.el;
-        var apply = function () {
-          if (!scene.renderer) return;
-          scene.renderer.setClearColor(0x000000, 0);
-          scene.renderer.setClearAlpha(0);
-        };
-        scene.addEventListener("renderstart", apply);
-        apply();
+        this.ready = false;
+        var sceneEl = this.el;
+        var THREE = AFRAME.THREE;
+        var self = this;
+        function hook() {
+          if (self.ready || !sceneEl.renderer) return;
+          var video = sceneEl.parentNode && sceneEl.parentNode.querySelector("video");
+          if (!video) return;
+          video.style.opacity = "0";
+          var tex = new THREE.VideoTexture(video);
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          tex.format = THREE.RGBFormat;
+          self.bgScene = new THREE.Scene();
+          self.bgCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+          self.bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: tex })));
+          var renderer = sceneEl.renderer;
+          var origRender = renderer.render.bind(renderer);
+          renderer.autoClear = false;
+          renderer.render = function (sceneObj, cam) {
+            if (sceneObj === sceneEl.object3D) {
+              renderer.clear();
+              origRender(self.bgScene, self.bgCam);
+              renderer.clearDepth();
+            }
+            origRender(sceneObj, cam);
+          };
+          self.ready = true;
+        }
+        sceneEl.addEventListener("renderstart", hook);
+        sceneEl.addEventListener("arReady", hook);
+        setTimeout(hook, 800);
+        setTimeout(hook, 2000);
       }
     });
     AFRAME.registerComponent("lock-to-target", {
@@ -68,7 +93,7 @@
   <div class="example-container">
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind;"
-      transparent-scene
+      video-backdrop
       embedded
       color-space="sRGB"
       background="transparent: true"
