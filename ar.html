@@ -8,9 +8,25 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-    .example-container { overflow: hidden; position: absolute; inset: 0; width: 100%; height: 100%; }
+    .example-container { overflow: hidden; position: absolute; inset: 0; width: 100%; height: 100%; isolation: isolate; }
     .example-container a-scene { width: 100%; height: 100%; background: transparent !important; }
-    .a-canvas, canvas.a-canvas { background: transparent !important; }
+    .example-container video {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+      opacity: 1 !important;
+      display: block !important;
+    }
+    .a-canvas, canvas.a-canvas {
+      position: absolute !important;
+      inset: 0 !important;
+      z-index: 1 !important;
+      background: transparent !important;
+      mix-blend-mode: screen;
+    }
     .a-enter-vr, .a-enter-ar { display: none !important; }
     a.back { position: fixed; top: 8px; left: 8px; z-index: 30; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 999px; }
     #dbg { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 30; color: #9f6; font: 12px/1.4 ui-monospace, monospace; background: rgba(0,0,0,.55); padding: 8px; border-radius: 8px; pointer-events: none; }
@@ -21,41 +37,21 @@
     #inapp .copy { background: transparent; color: #e8eef7; border: 1px solid #334155; }
   </style>
   <script>
-    AFRAME.registerComponent("video-backdrop", {
+    AFRAME.registerComponent("show-camera", {
       init: function () {
-        this.ready = false;
         var sceneEl = this.el;
-        var THREE = AFRAME.THREE;
-        var self = this;
-        function hook() {
-          if (self.ready || !sceneEl.renderer) return;
+        function reveal() {
           var video = sceneEl.parentNode && sceneEl.parentNode.querySelector("video");
           if (!video) return;
-          video.style.opacity = "0";
-          var tex = new THREE.VideoTexture(video);
-          tex.minFilter = THREE.LinearFilter;
-          tex.magFilter = THREE.LinearFilter;
-          tex.format = THREE.RGBFormat;
-          self.bgScene = new THREE.Scene();
-          self.bgCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-          self.bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ map: tex })));
-          var renderer = sceneEl.renderer;
-          var origRender = renderer.render.bind(renderer);
-          renderer.autoClear = false;
-          renderer.render = function (sceneObj, cam) {
-            if (sceneObj === sceneEl.object3D) {
-              renderer.clear();
-              origRender(self.bgScene, self.bgCam);
-              renderer.clearDepth();
-            }
-            origRender(sceneObj, cam);
-          };
-          self.ready = true;
+          video.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:1;display:block;";
+          var canvas = sceneEl.querySelector("canvas");
+          if (canvas) canvas.style.mixBlendMode = "screen";
         }
-        sceneEl.addEventListener("renderstart", hook);
-        sceneEl.addEventListener("arReady", hook);
-        setTimeout(hook, 800);
-        setTimeout(hook, 2000);
+        sceneEl.addEventListener("renderstart", reveal);
+        sceneEl.addEventListener("arReady", reveal);
+        setTimeout(reveal, 500);
+        setTimeout(reveal, 1500);
+        setTimeout(reveal, 3000);
       }
     });
     AFRAME.registerComponent("lock-to-target", {
@@ -74,7 +70,7 @@
         var dbg = document.querySelector("#dbg");
         if (!this.el.object3D.visible) return;
         var e = this.el.object3D.matrix.elements;
-        dbg.textContent = "鎖定中 x=" + e[12].toFixed(2) + " y=" + e[13].toFixed(2) + " z=" + e[14].toFixed(2) + "（這組數字移動手機時應改變）";
+        dbg.textContent = "鎖定中 x=" + e[12].toFixed(2) + " y=" + e[13].toFixed(2) + " z=" + e[14].toFixed(2);
       }
     });
   </script>
@@ -93,11 +89,11 @@
   <div class="example-container">
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind;"
-      video-backdrop
+      show-camera
       embedded
       color-space="sRGB"
       background="transparent: true"
-      renderer="colorManagement: true; alpha: true; physicallyCorrectLights: true"
+      renderer="alpha: true; colorManagement: true; physicallyCorrectLights: true"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
