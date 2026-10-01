@@ -8,9 +8,9 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
     html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-    .example-container { overflow: hidden; position: absolute; inset: 0; width: 100%; height: 100%; isolation: isolate; }
+    .example-container { overflow: hidden; position: absolute; inset: 0; width: 100%; height: 100%; }
     .example-container a-scene { width: 100%; height: 100%; background: transparent !important; }
-    .example-container video {
+    .example-container > video {
       position: absolute !important;
       inset: 0 !important;
       width: 100% !important;
@@ -20,17 +20,25 @@
       opacity: 1 !important;
       display: block !important;
     }
-    .a-canvas, canvas.a-canvas {
-      position: absolute !important;
-      inset: 0 !important;
-      z-index: 1 !important;
-      background: transparent !important;
-      mix-blend-mode: screen;
-    }
+    .a-canvas, canvas.a-canvas { opacity: 0 !important; pointer-events: none !important; }
     .a-enter-vr, .a-enter-ar { display: none !important; }
-    a.back { position: fixed; top: 8px; left: 8px; z-index: 30; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 999px; }
-    #sound { display: none; position: fixed; right: 8px; top: 8px; z-index: 30; border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 700; background: #f4d35e; color: #111; }
+    a.back { position: fixed; top: 8px; left: 8px; z-index: 40; color: #fff; text-decoration: none; font-size: 13px; background: rgba(0,0,0,.5); padding: 6px 10px; border-radius: 999px; }
+    #sound { display: none; position: fixed; right: 8px; top: 8px; z-index: 40; border: 0; border-radius: 999px; padding: 8px 14px; font-weight: 700; background: #f4d35e; color: #111; }
     #sound.show { display: block; }
+    #clip {
+      display: none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 20;
+      width: 240px;
+      height: 325px;
+      object-fit: cover;
+      background: #000;
+      opacity: 1;
+      transform-origin: 0 0;
+      pointer-events: none;
+    }
     #inapp { display: none; position: fixed; inset: 0; z-index: 50; background: #070b14; color: #e8eef7; padding: 28px 20px; font-family: "PingFang TC","Noto Sans TC",sans-serif; }
     #inapp.show { display: flex; flex-direction: column; justify-content: center; gap: 12px; text-align: center; }
     #inapp a, #inapp button { display: block; width: 100%; max-width: 360px; margin: 0 auto; padding: 14px; border-radius: 14px; font-weight: 700; border: 0; text-decoration: none; }
@@ -42,40 +50,67 @@
       init: function () {
         var sceneEl = this.el;
         function reveal() {
-          var video = sceneEl.parentNode && sceneEl.parentNode.querySelector("video");
-          if (!video) return;
+          var video = sceneEl.parentNode && sceneEl.parentNode.querySelector(":scope > video");
+          if (!video) video = sceneEl.parentNode && sceneEl.parentNode.querySelector("video");
+          if (!video || video.id === "clip") return;
           video.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:1;display:block;";
-          var canvas = sceneEl.querySelector("canvas");
-          if (canvas) canvas.style.mixBlendMode = "screen";
         }
         sceneEl.addEventListener("renderstart", reveal);
         sceneEl.addEventListener("arReady", reveal);
         setTimeout(reveal, 500);
         setTimeout(reveal, 1500);
-        setTimeout(reveal, 3000);
       }
     });
     AFRAME.registerComponent("lock-to-target", {
       init: function () {
         this.el.object3D.matrixAutoUpdate = false;
-        var video = document.querySelector("#ar-video");
+        var clip = document.querySelector("#clip");
         var sound = document.querySelector("#sound");
+        var THREE = AFRAME.THREE;
+        this.corners = [
+          new THREE.Vector3(-0.5, 0.675, 0),
+          new THREE.Vector3(0.5, 0.675, 0)
+        ];
         this.el.addEventListener("targetFound", function () {
-          if (video) video.play().catch(function () {});
+          clip.style.display = "block";
           sound.classList.add("show");
+          clip.play().catch(function () {});
         });
         this.el.addEventListener("targetLost", function () {
-          if (video) video.pause();
+          clip.style.display = "none";
+          clip.pause();
         });
         sound.addEventListener("click", function () {
-          if (!video) return;
-          video.muted = !video.muted;
-          sound.textContent = video.muted ? "開聲音" : "關聲音";
-          if (!video.muted) video.play().catch(function () {});
+          clip.muted = false;
+          clip.volume = 1;
+          clip.play().then(function () {
+            sound.textContent = "有聲音";
+          }).catch(function () {
+            sound.textContent = "再點一次";
+          });
         });
+        this.clip = clip;
       },
       tick: function () {
         this.el.object3D.matrixAutoUpdate = false;
+        if (!this.el.object3D.visible || !this.clip) return;
+        var sceneEl = this.el.sceneEl;
+        var camera = sceneEl.camera;
+        if (!camera) return;
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        var a = this.corners[0].clone().applyMatrix4(this.el.object3D.matrixWorld).project(camera);
+        var b = this.corners[1].clone().applyMatrix4(this.el.object3D.matrixWorld).project(camera);
+        var ax = (a.x * 0.5 + 0.5) * w;
+        var ay = (-a.y * 0.5 + 0.5) * h;
+        var bx = (b.x * 0.5 + 0.5) * w;
+        var by = (-b.y * 0.5 + 0.5) * h;
+        var width = Math.hypot(bx - ax, by - ay);
+        if (!isFinite(width) || width < 20) return;
+        var angle = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
+        this.clip.style.width = width + "px";
+        this.clip.style.height = (width * 1.35) + "px";
+        this.clip.style.transform = "translate(" + ax + "px," + ay + "px) rotate(" + angle + "deg)";
       }
     });
   </script>
@@ -90,6 +125,7 @@
   </div>
   <a class="back" href="./index.html">返回</a>
   <button id="sound" type="button">開聲音</button>
+  <video id="clip" src="./assets/overlay.mp4" loop playsinline webkit-playsinline muted preload="auto"></video>
 
   <div class="example-container">
     <a-scene
@@ -97,18 +133,12 @@
       show-camera
       embedded
       color-space="sRGB"
-      background="transparent: true"
-      renderer="alpha: true; colorManagement: true; physicallyCorrectLights: true"
+      renderer="alpha: true"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <a-assets>
-        <video id="ar-video" src="./assets/overlay.mp4" loop playsinline webkit-playsinline muted preload="auto" crossorigin="anonymous"></video>
-      </a-assets>
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <a-entity mindar-image-target="targetIndex: 0" lock-to-target>
-        <a-video src="#ar-video" position="0 0 0.03" width="1" height="1.35"></a-video>
-      </a-entity>
+      <a-entity mindar-image-target="targetIndex: 0" lock-to-target></a-entity>
     </a-scene>
   </div>
   <script>
